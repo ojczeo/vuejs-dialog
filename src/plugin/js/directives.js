@@ -9,9 +9,6 @@ let Directives = function (Vue) {
         Vue: {get: () => Vue},
         confirmDefinition: {
             get: this.defineConfirm
-        },
-        alertDefinition: {
-            get: this.defineAlert
         }
     })
 }
@@ -58,33 +55,28 @@ Directives.prototype.getCatchCallback =  function(binding) {
     return noop
 }
 
+Directives.prototype.clickHandler =  function(event, el, binding) {
+    event.preventDefault()
+    event.stopImmediatePropagation()
 
+    let options = this.getOptions(binding)
+    let confirmMessage = this.getConfirmMessage(binding)
+    let thenCallback = this.getThenCallback(binding, el)
+    let catchCallback = this.getCatchCallback(binding)
+
+    this.Vue.dialog
+        .confirm(confirmMessage, options)
+        .then(thenCallback)
+        .catch(catchCallback)
+}
 
 Directives.prototype.defineConfirm = function () {
-    const _this = this
     const DirectiveDefinition = {}
 
-    const clickHandler = function (event, el, binding) {
-        event.preventDefault()
-        event.stopImmediatePropagation()
-
-        let options = _this.getOptions(binding)
-        let confirmMessage = _this.getConfirmMessage(binding)
-
-        _this.Vue.dialog
-            .confirm(confirmMessage, options)
-            .then(_this.getThenCallback(binding, el))
-            .catch(_this.getCatchCallback(binding))
-    }
-
     DirectiveDefinition.bind = (el, binding) => {
-        if (el.VuejsDialog === undefined) {
-            el.VuejsDialog = {}
-        }
+        el.VuejsDialog = el.VuejsDialog || {}
 
-        el.VuejsDialog.clickHandler = function (event) {
-            clickHandler(event, el, binding)
-        }
+        el.VuejsDialog.clickHandler = event => this.clickHandler(event, el, binding)
 
         el.addEventListener('click', el.VuejsDialog.clickHandler, true)
     }
@@ -94,10 +86,6 @@ Directives.prototype.defineConfirm = function () {
     }
 
     return DirectiveDefinition
-}
-
-Directives.prototype.defineAlert = function () {
-    // Still Considering it uses case.
 }
 
 export default Directives
