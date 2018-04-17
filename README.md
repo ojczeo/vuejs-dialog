@@ -3,7 +3,7 @@
 > A lightweight, promise based alert, prompt and confirm dialog.
 
 [![npm version](https://badge.fury.io/js/vuejs-dialog.svg)](https://badge.fury.io/js/vuejs-dialog)
-[![Build Status](https://scrutinizer-ci.com/g/Godofbrowser/vuejs-dialog/badges/build.png?b=master)](https://scrutinizer-ci.com/g/Godofbrowser/vuejs-dialog/build-status/master)
+[![Build Status](https://travis-ci.org/Godofbrowser/vuejs-dialog.svg?branch=master)](https://travis-ci.org/Godofbrowser/vuejs-dialog)
 [![Scrutinizer](https://img.shields.io/scrutinizer/g/Godofbrowser/vuejs-dialog.svg?branch=master)](https://scrutinizer-ci.com/g/Godofbrowser/vuejs-dialog/?branch=master)
 [![npm](https://img.shields.io/npm/dt/vuejs-dialog.svg)]()
 
@@ -29,7 +29,7 @@ Include the script:
  
  <script>
 // Tell Vue to install the plugin.
-window.Vue.use(VuejsDialog)
+window.Vue.use(VuejsDialog.default)
 </script>
   ```
 #### NPM
@@ -89,18 +89,17 @@ this.$dialog.confirm("If you delete this record, it'll be gone forever.", {
     });
 ```
 
-## Usage as a directive (new)
+## Usage as a directive
 
-If you don't pass a message, the global/default message would be used.
+__If you don't pass a message, the global/default message would be used.__
 ```html
 <button type="submit" v-confirm="">submit</button>
 ```
 
-
 ```html
 // Callbacks can be provided
-// Note: If "loader" is set to true, the makeAdmin callback will be passed a "dialog" object
-// Which is useful for stoping the loader, or closing the dialog.
+// Note: If "loader" is set to true, the makeAdmin callback will receive a "dialog" object
+// Which is useful for closing the dialog when transaction is complete.
 <button v-confirm="{ok: makeAdmin, cancel: doNothing, message: 'User will be given admin privileges. Make user an Admin?'}">Make Admin</button>
 ```
 ```javascript
@@ -115,14 +114,58 @@ methods: {
 }
 ```
 
-
-For v-confirm directive, if an "OK" callback is not provided, the default event would be triggered.
+__A more practical use of ths `v-confirm` directive inside a loop__
 
 ```html
-// You can use it on links too
+// While looping through users
+<button v-for="user in users"
+        v-confirm="{
+            loader: true,
+            ok: dialog => makeAdmin(dialog, user), 
+            cancel: doNothing, 
+            message: 'User will be given admin privileges. Make user an Admin?'}"
+>
+Make Admin
+</button>
+```
+```javascript
+methods: {
+    makeAdmin: function(dialog, user) {
+        // Make user admin from the backend
+        /* tellServerToMakeAdmin(user) */
+        
+        // When completed, close the dialog
+        /* dialog.close() */
+        
+    },
+    doNothing: function() {
+        // Do nothing or some other stuffs
+    }
+}
+```
+
+__For v-confirm directive, if an "OK" callback is not provided, the default event would be triggered.__
+
+```html
+// Default Behaviour when used on links
 <a href="http://example.com" v-confirm="'This will take you to http://example.com. Proceed with caution'">Go to example.com</a>
 
 ```
+
+## Setting a dialog title (new)
+
+You can now set a dialog title by passing your message as an object instead of a string.
+The message object should contain a `title` and `body`
+
+```javascript
+let message = {
+    title: 'Vuejs Dialog Plugin',
+    body: 'A lightweight, promise based alert, prompt and confirm dialog'
+}
+
+this.$dialog.confirm(message)
+```
+
 
 ### Options
 ```javascript
@@ -139,7 +182,9 @@ let options = {
     animation: 'zoom', // Available: "zoom", "bounce", "fade"
     type: 'basic', // coming soon: 'soft', 'hard'
     verification: 'continue', // for hard confirm, user will be prompted to type this to enable the proceed button
+    verificationHelp: 'Type "[+:verification]" below to confirm', // Verification help text. [+:verification] will be matched with 'options.verification' (i.e 'Type "continue" below to confirm')
     clicksCount: 3, // for soft confirm, user will be asked to click on "proceed" btn 3 times before actually proceeding
+    backdropClose: false // set to true to close the dialog when clicking outside of the dialog window, i.e. click landing on the mask 
 };
 
 this.$dialog.confirm(message, options)
@@ -166,6 +211,94 @@ Vue.use(VuejsDialog, {
 // Please note that local configurations will be considered before global configurations.
 // This gives you the flexibility of overriding the global config on individual call.
 ```
+
+### CSS Override
+
+Please use basic css, ex:
+```css
+.dg-btn--ok {
+     border-color: green;
+ }
+ 
+.dg-btn-loader .dg-circle {
+    background-color: green;
+}
+```
+
+### Pro tip
+You can use any of the options in your verification help text. Example:
+
+```javascript
+this.$dialog.confirm($message, {
+    verificationHelp: 'Enter "[+:verification]" below and click on "[+:okText]"',
+     type: 'hard'
+})
+```
+
+## What's next?
+### Custom components (coming soon!!!)
+
+```vue
+/* File: custom-component.vue */
+<template>
+    <div class="custom-view-wrapper">
+        <h2>Share this amazing plugin</h2>
+
+        <div v-if="options.html" class="dg-content" v-html="messageBody"></div>
+        <div v-else="" class="dg-content">{{ messageBody }}</div>
+
+        <ok-btn @click="share('share url')" :loading="loading" :options="options" :enabled="true">Share on facebook</ok-btn>
+        <ok-btn @click="share('share url')" :loading="loading" :options="options" :enabled="true">Share on twitter</ok-btn>
+        <ok-btn @click="share('share url')" :loading="loading" :options="options" :enabled="true">Share on linkedIn</ok-btn>
+        <cancel-btn @click="proceed()" :loading="loading" :options="options" :enabled="true">Maybe later!</cancel-btn>
+    </div>
+</template>
+
+<script>
+    import DialogMixin from 'vuejs-dialog/js/mixins/dialog-mixin'
+
+    export default {
+        mixins: [DialogMixin], // All dialog methods (proceed, cancel, etc), state variables (options, etc) and computed properties are included
+        methods: {
+            share(url) {
+                // popup share window
+            }
+        }
+    }
+</script>
+
+<style scoped="">
+    button {
+        width: 100%;
+        margin-bottom: 10px;
+        float: none;
+    }
+</style>
+```
+
+```javascript
+import TestView from './path/to/file/custom-component.vue'
+const VIEW_NAME = 'my-view'
+
+let vm = new Vue({
+    created() {
+        this.$dialog.registerComponent(VIEW_NAME, TestView)
+    },
+    methods: {
+        showCustomView(){
+            this.$dialog.alert(trans('messages.html'), {
+                view: VIEW_NAME, // can be set globally too
+                html: true,
+                animation: 'fade',
+                backdropClose: true
+            })
+        }
+    }
+})
+```
+...and you get your custom view
+![Vuejs Dialog Plugin](./src/docs/img/custom-view.png?raw=true "Vuejs Dialog Plugin custom view demo")
+
 # License
 
 [MIT](http://opensource.org/licenses/MIT)
